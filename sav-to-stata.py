@@ -7,20 +7,38 @@ import os
 from tkinter.filedialog import askopenfilename
 from tkinter import Tk
 
+def replace_extension(filename):
+    name, ext = os.path.splitext(filename)
+    if ext.lower() == ".sav":
+        return name + ".dta"
+    else:
+        raise Exception("File does not have .SAV extension.")
+
 #%% open file dialog
 root = Tk()
 root.withdraw() # Hide the main window
 root.call('wm', 'attributes', '.', '-topmost', True)
 
 filename = askopenfilename()
-outfile = filename.replace(".sav",".dta") # output filename
+outfile = replace_extension(filename) # output filename
 
 
 #%% read file and process
 df, meta = pyreadstat.read_sav(filename)
 
 # truncate variable labels to 80 characters max
-varlabels = dict(map(lambda i,j : (i,j[0:80]) , meta.column_names, meta.column_labels))
+varlabels = {}
+for col in range(len(meta.column_names)):
+    varname = meta.column_names[col]
+    varlabel = meta.column_labels[col]
+    
+    # set varlabel to varname if there's no varlabel
+    if varlabel==None:
+        varlabel = varname
+    
+    # truncate varlables to 80 characters
+    varlabel = varlabel[0:80]
+    varlabels[varname] = varlabel
 
 # remove string variables from the value labels dictionary
 value_labels = meta.variable_value_labels
@@ -37,3 +55,5 @@ df.to_stata(
     variable_labels=varlabels,
     value_labels=meta.variable_value_labels
     )
+
+print("File '" + outfile + "' saved!")
